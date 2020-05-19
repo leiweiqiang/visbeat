@@ -42,8 +42,9 @@ RUN $CONDA_DIR/envs/python2/bin/python -m ipykernel install && \
     . activate python2 && \
     $CONDA_DIR/envs/python2/bin/pip install numpy \
     scipy \
-    librosa \
-    imageio \
+    llvmlite==0.26.0 \
+    librosa==0.6.2 \
+    imageio==2.4.1 \
     moviepy \
     youtube-dl \
     requests \
