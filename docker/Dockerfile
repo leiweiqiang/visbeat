@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
 
 # Create a Python 2.x environment using conda including at least the ipython kernel
 # and the kernda utility.
-RUN conda create --quiet --yes -p $CONDA_DIR/envs/python2 python=2.7 ipython ipykernel kernda && \
+RUN conda create --yes -p $CONDA_DIR/envs/python2 python=2.7 ipython ipykernel kernda && \
     conda clean -tipsy
 
 # Create a global kernelspec in the image and modify it so that it properly activates
@@ -42,7 +42,7 @@ RUN $CONDA_DIR/envs/python2/bin/python -m ipykernel install && \
     . activate python2 && \
     $CONDA_DIR/envs/python2/bin/pip install numpy \
     scipy \
-    llvmlite==0.26.0 \
+    llvmlite==0.31.0 \
     librosa==0.6.2 \
     imageio==2.4.1 \
     moviepy \
