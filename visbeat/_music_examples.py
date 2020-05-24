@@ -1,4 +1,4 @@
-from VisBeatExampleVideo import *
+from .VisBeatExampleVideo import *
 dances = [];
 
 music = [];

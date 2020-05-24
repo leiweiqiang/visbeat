@@ -1,5 +1,5 @@
-from AParamDict import *
-import cPickle as pickle
+from .AParamDict import *
+import pickle as pickle
 import os
 class AFuncDict(AParamDict):
     """AFuncDict (class): Extends AParamDict so that functions can be assigned to features and called whenever

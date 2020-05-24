@@ -1,4 +1,4 @@
-from Event import *
+from .Event import *
 
 class VisualBeat(Event):
     def VBOBJECT_TYPE(self):

@@ -1,4 +1,4 @@
-from AObject import *
+from .AObject import *
 #import shutil
 from distutils.dir_util import copy_tree
 
@@ -97,7 +97,7 @@ class AFileManager(AObject):
 
     def getDir(self, name):
         # printDictionary(self.directories)
-        return self.directories.get(name);
+        return self.directories.get(name)
 
 
     def emptyDir(self, name):

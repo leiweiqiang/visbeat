@@ -1,5 +1,5 @@
-from VisBeatExampleVideo import *
-from _music_examples import *
+from .VisBeatExampleVideo import *
+from ._music_examples import *
 
 dances.append(VisBeatExampleVideo(display_name = 'Turtle', name='turtle', url='https://www.youtube.com/watch?v=PWD4gktEUAY', start_beat=0));
 dances.append(VisBeatExampleVideo(display_name = 'Louie The Cat', name='louie_the_cat', url='https://www.youtube.com/watch?v=hqFG6d86ygI', start_beat=None));

@@ -1,5 +1,5 @@
-from EventList import *
-from TimeSignal1D import *
+from .EventList import *
+from .TimeSignal1D import *
 from scipy.io.wavfile import write
 import librosa
 import librosa.display
@@ -7,8 +7,11 @@ import librosa.display
 from scipy import signal, fftpack
 
 
-
 class Audio(TimeSignal1D):
+
+    def __str__(self):
+        return "DUDE"
+
     """Audio (class): A sound, and a bunch of convenience functions to go with it.
         Attributes:
             x: the sound signal
@@ -18,28 +21,31 @@ class Audio(TimeSignal1D):
     FEATURE_FUNCS = TimeSignal1D.FEATURE_FUNCS.copy();
 
     def __init__(self, path=None, sampling_rate=None, x=None, name=None):
-        #VBObject.__init__(self, path=path);
+        # VBObject.__init__(self, path=path);
         TimeSignal1D.__init__(self, path=path, sampling_rate=sampling_rate, x=x);
-        #self.initializeBlank();
-        if(name is not None):
+        # self.initializeBlank();
+        if (name is not None):
             self.name = name;
-        if(path):
+        if (path):
             self.loadFile();
-        if(self.name is None):
+        if (self.name is None):
             self.name = self.getInfo('file_name')
-
 
     # <editor-fold desc="Property: 'name'">
     @property
     def name(self):
         return self.getName();
+
     def getName(self):
         return self._name;
+
     @name.setter
     def name(self, value):
         self._setName(value);
+
     def _setName(self, value):
         self._name = value;
+
     # </editor-fold>
 
     def initializeBlank(self):
@@ -63,15 +69,15 @@ class Audio(TimeSignal1D):
         return clone;
 
     def loadFile(self, file_path=None, sampling_rate=None, convert_to_mono=True):
-        if(file_path):
+        if (file_path):
             self.setPath(file_path=file_path);
 
-        if('file_path' in self.a_info):
-            self.x, self.sampling_rate = librosa.load(self.a_info['file_path'],sr=sampling_rate, mono=convert_to_mono);
-            if(len(self.x.shape)>1):
-                self.a_info['stereo_signal']=self.x;
+        if ('file_path' in self.a_info):
+            self.x, self.sampling_rate = librosa.load(self.a_info['file_path'], sr=sampling_rate, mono=convert_to_mono);
+            if (len(self.x.shape) > 1):
+                self.a_info['stereo_signal'] = self.x;
                 self.setInfo('stereo_sampling_rate', self.sampling_rate);
-                self.x = np.mean(self.x, axis = 0)
+                self.x = np.mean(self.x, axis=0)
                 print("averaged stereo channels");
 
     def getStereo(self):
@@ -79,8 +85,6 @@ class Audio(TimeSignal1D):
 
     def getStereoSamplingRate(self):
         return self.getInfo('stereo_sampling_rate');
-
-
 
     def getStringForHTMLStreamingBase64(self):
         encoded = self.getStereoEncodedBase64WAV();
@@ -106,16 +110,16 @@ class Audio(TimeSignal1D):
     def getLocalRhythmicSaliency(self, **kwargs):
         return self.getOnsetEnvelope(**kwargs);
 
-
-    def play(self, autoplay = None):
+    def play(self, autoplay=None):
         """
          Play audio. Works in Jupyter. if notebook, audio will play normalized -- this is something html5 audio seems to do by default.
         :param autoplay:
         :return:
         """
-        if(ISNOTEBOOK):
+        if (ISNOTEBOOK):
             # if(normalize):
-            audiodisp = vb_get_ipython().display.Audio(data=self.getSignal(), rate=self.sampling_rate, autoplay=autoplay);
+            audiodisp = vb_get_ipython().display.Audio(data=self.getSignal(), rate=self.sampling_rate,
+                                                       autoplay=autoplay);
             vb_get_ipython().display.display(audiodisp);
             # vb_get_ipython().display.display(vb_get_ipython().display.Audio(data=self.getSignal(), rate=self.sampling_rate, autoplay=False))
             # else:
@@ -132,11 +136,11 @@ class Audio(TimeSignal1D):
         else:
             p = pyaudio.PyAudio()
             stream = p.open(format=pyaudio.paFloat32,
-                             channels=self.n_channels,
-                             rate=self.sampling_rate,
-                             output=True,
-                             output_device_index=1
-                             )
+                            channels=self.n_channels,
+                            rate=self.sampling_rate,
+                            output=True,
+                            output_device_index=1
+                            )
             stream.write(self.getSignal())
             stream.stop_stream();
             stream.close()
@@ -144,74 +148,72 @@ class Audio(TimeSignal1D):
 
     def playBeats(self, indices=None, beats=None):
         beat_inds = indices;
-        if(beats is None):
+        if (beats is None):
             beats = self.getBeatEvents();
-        if(beat_inds is None):
-            beat_inds = [0, len(beats)-1];
-        if(not isinstance(beat_inds, list)):
-            beat_inds=[beat_inds-1, beat_inds, beat_inds+1];
-        if(beat_inds[0]<0):
+        if (beat_inds is None):
+            beat_inds = [0, len(beats) - 1];
+        if (not isinstance(beat_inds, list)):
+            beat_inds = [beat_inds - 1, beat_inds, beat_inds + 1];
+        if (beat_inds[0] < 0):
             start_time = 0;
         else:
             start_time = beats[beat_inds[0]].start;
-        if(beat_inds[-1]>len(beats)):
+        if (beat_inds[-1] > len(beats)):
             end_time = self.getDuration();
         else:
             end_time = beats[beat_inds[-1]].start;
-        self.playSegment(time_range = [start_time, end_time]);
+        self.playSegment(time_range=[start_time, end_time]);
 
     def AudioClipFromBeatRange(self, beat_range, beats=None):
-        if(beats is None):
+        if (beats is None):
             beats = self.getBeatEvents();
-        if(beat_range is None):
-            beat_range = [0, len(beats)-1];
-        if(beat_range[1] is None):
-            beat_range[1]=len(beats)-1;
+        if (beat_range is None):
+            beat_range = [0, len(beats) - 1];
+        if (beat_range[1] is None):
+            beat_range[1] = len(beats) - 1;
 
-        return self.AudioClip(start=beats[beat_range[0]].start, end=beats[beat_range[1]].start);
-
-
-
+        return self.NewAudioClip(start=beats[beat_range[0]].start, end=beats[beat_range[1]].start);
 
     def playSegment(self, time_range, autoplay=None):
         start_time = time_range[0];
         end_time = time_range[1];
-        if(isinstance(start_time, Event)):
+        if (isinstance(start_time, Event)):
             start_time = start_time.start;
-        if(isinstance(end_time, Event)):
+        if (isinstance(end_time, Event)):
             end_time = end_time.start;
-        if(ISNOTEBOOK):
-            audiodisp = vb_get_ipython().display.Audio(data=self.getSignalSegment(time_range=[start_time, end_time]), rate=self.sampling_rate, autoplay=autoplay);
+        if (ISNOTEBOOK):
+            audiodisp = vb_get_ipython().display.Audio(data=self.getSignalSegment(time_range=[start_time, end_time]),
+                                                       rate=self.sampling_rate, autoplay=autoplay);
             vb_get_ipython().display.display(audiodisp);
             # vb_get_ipython().display.display(vb_get_ipython().display.Audio(data=self.getSignal(), rate=self.sampling_rate, autoplay=False))
         else:
             p = pyaudio.PyAudio()
             stream = p.open(format=pyaudio.paFloat32,
-                             channels=self.n_channels,
-                             rate=self.sampling_rate,
-                             output=True,
-                             output_device_index=1
-                             )
+                            channels=self.n_channels,
+                            rate=self.sampling_rate,
+                            output=True,
+                            output_device_index=1
+                            )
             stream.write(self.getSignalSegment(time_range=[start_time, end_time]))
             stream.stop_stream();
             stream.close()
             p.terminate()
 
     def writeToFile(self, output_path=None, output_sampling_rate=None):
-        assert(output_path), "must provide path to save audio."
+        assert (output_path), "must provide path to save audio."
         data = self.getSignal();
-        scaled = np.int16(data/np.max(np.abs(data)) * 32767)
-        if(output_sampling_rate is None):
-            output_sampling_rate=44100
+        scaled = np.int16(data / np.max(np.abs(data)) * 32767)
+        if (output_sampling_rate is None):
+            output_sampling_rate = 44100
         write(output_path, output_sampling_rate, scaled)
 
     def setValueRange(self, value_range=None):
-        if(value_range is None):
-            value_range = [-1,1];
+        if (value_range is None):
+            value_range = [-1, 1];
         TimeSignal1D.setValueRange(self, value_range=value_range);
 
     def resample(self, sampling_rate):
-        new_n_samples = sampling_rate*self.getDuration();
+        new_n_samples = sampling_rate * self.getDuration();
         self.x = sp.signal.resample(self.x, int(new_n_samples));
         self.sampling_rate = sampling_rate;
 
@@ -220,31 +222,29 @@ class Audio(TimeSignal1D):
         new_a.resample(sampling_rate=sampling_rate);
         return new_a;
 
-
-
     def AlignedTo(self, B):
-        assert(False),'Abe needs to fix -- broke when messing with alignment code for video';
+        assert (False), 'Abe needs to fix -- broke when messing with alignment code for video';
 
         A = self.clone();
-        if(A.sampling_rate !=B.sampling_rate):
+        if (A.sampling_rate != B.sampling_rate):
             A.resample(B.sampling_rate);
 
         a_signal = A.getSignal();
         b_signal = B.getSignal();
         a_duration = self.getDuration();
 
-        if(len(a_signal) < len(b_signal)):
+        if (len(a_signal) < len(b_signal)):
             siglen = spotgt_shift_bit_length(len(b_signal));
         else:
             siglen = spotgt_shift_bit_length(len(a_signal));
 
-        npada = siglen-len(a_signal);
-        if(npada>0):
-            a_signal = np.pad(a_signal, (0,npada), 'constant', constant_values=(0, 0));
+        npada = siglen - len(a_signal);
+        if (npada > 0):
+            a_signal = np.pad(a_signal, (0, npada), 'constant', constant_values=(0, 0));
 
-        npadb = siglen-len(b_signal);
-        if(npadb>0):
-            b_signal = np.pad(b_signal, (0,npadb), 'constant', constant_values=(0, 0));
+        npadb = siglen - len(b_signal);
+        if (npadb > 0):
+            b_signal = np.pad(b_signal, (0, npadb), 'constant', constant_values=(0, 0));
 
         Af = fftpack.fft(a_signal);
         Bf = fftpack.fft(b_signal);
@@ -255,7 +255,7 @@ class Audio(TimeSignal1D):
 
         ashift = np.argmax(np.abs(fftpack.ifft(Ar * Bf)));
         print(ashift);
-        print(np.argmax(np.abs(fftpack.ifft(Af * Br))));
+        print((np.argmax(np.abs(fftpack.ifft(Af * Br)))));
 
         a_return = Audio();
         a_return.n_channels = 1;
@@ -274,20 +274,20 @@ class Audio(TimeSignal1D):
         a_signal = self.getSignal();
         b_signal = B.getSignal();
         a_duration = self.getDuration();
-        if(self.sampling_rate !=B.sampling_rate):
-            ansamps = a_duration*B.sampling_rate;
+        if (self.sampling_rate != B.sampling_rate):
+            ansamps = a_duration * B.sampling_rate;
             a_signal = sp.signal.resample(a_signal, int(ansamps));
             # a_signal = librosa.resample(a_signal, self.sampling_rate, B.sampling_rate, res_type='kaiser_fast');
-        if(len(a_signal) < len(b_signal)):
+        if (len(a_signal) < len(b_signal)):
             siglen = spotgt_shift_bit_length(len(b_signal));
         else:
             siglen = spotgt_shift_bit_length(len(a_signal));
-        npada = siglen-len(a_signal);
-        if(npada>0):
-            a_signal = np.pad(a_signal, (0,npada), 'constant', constant_values=(0, 0));
-        npadb = siglen-len(b_signal);
-        if(npadb>0):
-            b_signal = np.pad(b_signal, (0,npadb), 'constant', constant_values=(0, 0));
+        npada = siglen - len(a_signal);
+        if (npada > 0):
+            a_signal = np.pad(a_signal, (0, npada), 'constant', constant_values=(0, 0));
+        npadb = siglen - len(b_signal);
+        if (npadb > 0):
+            b_signal = np.pad(b_signal, (0, npadb), 'constant', constant_values=(0, 0));
 
         # if(len(a_signal) < len(b_signal)):
         #     npad = len(b_signal)-len(a_signal);
@@ -308,82 +308,78 @@ class Audio(TimeSignal1D):
         # Ar = -Af.conjugate();
         # Br = -Bf.conjugate();
         ashiftab = np.argmax(np.abs(fftpack.ifft(Ar * Bf)));
-        durationsamples = self.getDuration()*B.sampling_rate;
+        durationsamples = self.getDuration() * B.sampling_rate;
         # if(ashiftab>(durationsamples*0.5)):
         #     ashiftab = ashiftab-durationsamples;
         return truediv(ashiftab, B.sampling_rate);
 
-    def getBeatEventList(self, time_range = None):
-        beats = self.getBeats();
-        if(time_range is None):
-            return EventList.FromStartTimes(beats, type='beats');
+    def getBeatEventList(self, time_range=None):
+        beats = self.getBeats()
+        if time_range is None:
+            return EventList.FromStartTimes(beats, type='beats')
 
         start_beat = 0;
         end_beat = len(beats) - 1;
-        if(time_range[0] is not None):
-            while((start_beat<len(beats)) and (beats[start_beat]<time_range[0])):
-                start_beat=start_beat+1;
-        if(time_range[1] is not None):
-            while(end_beat>0 and (beats[end_beat]>time_range[1])):
-                end_beat = end_beat-1;
-        if(end_beat>start_beat):
+        if (time_range[0] is not None):
+            while ((start_beat < len(beats)) and (beats[start_beat] < time_range[0])):
+                start_beat = start_beat + 1;
+        if (time_range[1] is not None):
+            while (end_beat > 0 and (beats[end_beat] > time_range[1])):
+                end_beat = end_beat - 1;
+        if (end_beat > start_beat):
             return EventList.FromStartTimes(beats[start_beat:end_beat], type='beats');
         else:
             return None;
 
-
     def getBeatEvents(self, start_time=None, end_time=None):
-        beat_eventlist = self.getBeatEventList();
-        return beat_eventlist.events;
+        beat_eventlist = self.getBeatEventList()
+        return beat_eventlist.events
 
-    def AudioClip(self, start, end):
-        import AudioClip
-        clip = AudioClip.AudioClip(path=self.getPath(), start=start, end=end);
-        return clip;
+    def NewAudioClip(self, start, end):
+        from . import AudioClip
+        return AudioClip(path=self.getPath(), start=start, end=end)
 
-
-    def getWithSoundAdded(self, add_times, sound=None, mute_original=None, gain_original = None):
-        if(sound is None):
+    def getWithSoundAdded(self, add_times, sound=None, mute_original=None, gain_original=None):
+        if (sound is None):
             sound = Audio.PingSound(sampling_rate=self.sampling_rate);
-        if(sound.sampling_rate==self.sampling_rate):
+        if (sound.sampling_rate == self.sampling_rate):
             s_toadd = sound.getSignal();
         else:
             new_n_samples = self.sampling_rate * sound.getDuration();
             s_toadd = sp.signal.resample(sound.getSignal(), int(new_n_samples));
 
         result = self.clone();
-        if(mute_original):
+        if (mute_original):
             result.x = np.zeros(result.x.shape);
-        if(gain_original is not None):
-            result.x = result.x*gain_original;
-
+        if (gain_original is not None):
+            result.x = result.x * gain_original;
 
         sl = len(s_toadd);
         for t in add_times:
-            if(t<self.getDuration()):
-                ti = int(t*self.sampling_rate);
-                te = min(len(result.x), ti+sl);
-                result.x[ti:te]=result.x[ti:te]+s_toadd[0:te-ti];
+            if (t < self.getDuration()):
+                ti = int(t * self.sampling_rate);
+                te = min(len(result.x), ti + sl);
+                result.x[ti:te] = result.x[ti:te] + s_toadd[0:te - ti];
         result.setValueRange();
         # result.setMaxAbsValue(1.0);
         return result;
 
-
-    def showSpectrogram(self, time_range = None, **kwargs):
-        if(hop_length is None):
-            hop_length=AUDIO_DEFAULT_HOP_LENGTH;
+    def showSpectrogram(self, time_range=None, **kwargs):
+        if (hop_length is None):
+            hop_length = AUDIO_DEFAULT_HOP_LENGTH;
 
         fig = plt.figure();
 
         S = self.getSpectrogram(hop_length=hop_length, **kwargs);
         hop_length = self.getFeatureParams('spectrogram').get('hop_length');
-        print("hop length: {}".format(hop_length));
+        print(("hop length: {}".format(hop_length)));
         # S = librosa.stft(self.getSignal(), hop_length=hop_length);
 
-        librosa.display.specshow(librosa.amplitude_to_db(S,ref = np.max),sr=self.sampling_rate, hop_length=hop_length, y_axis = 'linear', x_axis = 'time')
+        librosa.display.specshow(librosa.amplitude_to_db(S, ref=np.max), sr=self.sampling_rate, hop_length=hop_length,
+                                 y_axis='linear', x_axis='time')
         plt.title('Power Spectrogram')
         plt.colorbar(format='%+2.0f dB')
-        plt.ylim([0,8000]);
+        plt.ylim([0, 8000]);
         plt.xlabel('Time (s)')
         if (time_range is not None):
             plt.xlim(time_range);
@@ -394,7 +390,7 @@ class Audio(TimeSignal1D):
         mel_spec = self.getMelSpectrogram(force_recompute=force_recompute, **kwargs);
         # Make a new figure
         plt.figure();
-        plt.figure(figsize=(12,4))
+        plt.figure(figsize=(12, 4))
         # Display the spectrogram on a mel scale
         # sample rate and hop length parameters are used to render the time axis
         librosa.display.specshow(mel_spec, sr=self.sampling_rate, x_axis='time', y_axis='mel')
@@ -405,15 +401,13 @@ class Audio(TimeSignal1D):
         # Make the figure layout compact
         plt.tight_layout()
 
-
     @staticmethod
     def Silence(n_seconds, sampling_rate, name=None):
-        x = np.zeros(int(np.ceil(n_seconds*sampling_rate)));
-        s = Audio(x=x, sampling_rate = sampling_rate, name = name);
-        if(s.name is None):
+        x = np.zeros(int(np.ceil(n_seconds * sampling_rate)));
+        s = Audio(x=x, sampling_rate=sampling_rate, name=name);
+        if (s.name is None):
             s.name = 'silence';
         return s;
-
 
     @staticmethod
     def _getDampedSin(freq, n_seconds=None, sampling_rate=16000, damping=0.1, noise_floor=0.001):
@@ -426,9 +420,9 @@ class Audio(TimeSignal1D):
         :param noise_floor:
         :return:
         """
-        if(n_seconds is None):
-            if(damping>0.005):
-                nosc = truediv(math.log(noise_floor,0.5),damping);
+        if (n_seconds is None):
+            if (damping > 0.005):
+                nosc = truediv(math.log(noise_floor, 0.5), damping);
                 n_seconds = truediv(nosc, freq);
             else:
                 n_seconds = 10.0;
@@ -438,35 +432,33 @@ class Audio(TimeSignal1D):
         dmp = np.power(0.5, dmp * damping);
         return np.multiply(x, dmp);
 
-
-
     @staticmethod
-    def PingSound(n_seconds=None, freqs=None, damping=None, sampling_rate = 16000):
-        if(freqs is None):
+    def PingSound(n_seconds=None, freqs=None, damping=None, sampling_rate=16000):
+        if (freqs is None):
             # freqs = [400,500,600, 700, 800, 900, 1000, 1100, 1200, 1300];
             # freqs = np.arange(4, 25) * 100
-            freqs = np.arange(5, 25) * 75; # just kind of thought this sounded fine...
-        if(damping is None):
-            damping = [0.05]*len(freqs);
-        if(not isinstance(damping,list)):
-            damping = [damping]*len(freqs);
-        s = Audio._getDampedSin(freq=freqs[0], n_seconds = n_seconds, sampling_rate = sampling_rate, damping=damping[0]);
-        for h in range(1,len(freqs)):
-            new_s = Audio._getDampedSin(freq=freqs[h], n_seconds = n_seconds, sampling_rate = sampling_rate, damping=damping[h]);
-            if(len(new_s)>len(s)):
-                new_s[:len(s)]=new_s[:len(s)]+s;
+            freqs = np.arange(5, 25) * 75;  # just kind of thought this sounded fine...
+        if (damping is None):
+            damping = [0.05] * len(freqs);
+        if (not isinstance(damping, list)):
+            damping = [damping] * len(freqs);
+        s = Audio._getDampedSin(freq=freqs[0], n_seconds=n_seconds, sampling_rate=sampling_rate, damping=damping[0]);
+        for h in range(1, len(freqs)):
+            new_s = Audio._getDampedSin(freq=freqs[h], n_seconds=n_seconds, sampling_rate=sampling_rate,
+                                        damping=damping[h]);
+            if (len(new_s) > len(s)):
+                new_s[:len(s)] = new_s[:len(s)] + s;
                 s = new_s;
             else:
-                s[:len(new_s)] = s[:len(new_s)]+new_s;
-        sa = Audio(x=s, sampling_rate=sampling_rate, name = 'ping');
+                s[:len(new_s)] = s[:len(new_s)] + new_s;
+        sa = Audio(x=s, sampling_rate=sampling_rate, name='ping');
         # sa.setValueRange(value_range=[-1,1]);
         sa.setMaxAbsValue(1.0);
         return sa;
 
-
     ##### --- FEATURES --- #####
 
-    def getBeats(self, use_full_signal=True, tightness = None, force_recompute=False):
+    def getBeats(self, use_full_signal=True, tightness=None, force_recompute=False):
         """
 
         :param use_full_signal: If called from AudioClip class, this will determine whether the full signal is used or
@@ -478,21 +470,21 @@ class Audio(TimeSignal1D):
         :param force_recompute:
         :return:
         """
-        if ((not self.hasFeature(name='beats')) or force_recompute):
-            beat_args = dict(sr = self.sampling_rate, units = 'time');
+        if (not self.hasFeature(name='beats')) or force_recompute:
+            beat_args = dict(sr=self.sampling_rate, units='time')
 
-            if (use_full_signal):
-                beat_args.update(dict(y = self.getFullSignal()));
+            if use_full_signal:
+                beat_args.update(dict(y=self.getFullSignal()))
             else:
                 beat_args.update(dict(y=self.getSignal()))
-            if (tightness is not None):
-                beat_args.update(dict(tightness=tightness));
+            if tightness is not None:
+                beat_args.update(dict(tightness=tightness))
 
             # print(beat_args)
-            tempo, beats = librosa.beat.beat_track(**beat_args);
-            self.setFeature(name='tempo', value=tempo);
-            self.setFeature(name='beats', value=beats);
-        return self.getFeature(name='beats');
+            tempo, beats = librosa.beat.beat_track(**beat_args)
+            self.setFeature(name='tempo', value=tempo)
+            self.setFeature(name='beats', value=beats)
+        return self.getFeature(name='beats')
 
     def getBeatVector(self, vector_length=None, force_recompute=False):
         """use_full_signal only makes a difference in AudioClip subclass."""
@@ -560,7 +552,7 @@ class Audio(TimeSignal1D):
             delta=delta,
         )
 
-        tp_keys = pick_params.keys();
+        tp_keys = list(pick_params.keys());
         for p in tp_keys:
             pick_params[p] = int(round(self.getOnsetSamplingRate() * pick_params[p]));
 
@@ -587,56 +579,56 @@ class Audio(TimeSignal1D):
         return events;
 
     def getBeatEvents(self, start_time=None, end_time=None, **kwargs):
-        beats = self.getBeats(**kwargs);
-        start_beat = 0;
-        end_beat = len(beats) - 1;
-        if(start_time is not None):
-            while((start_beat<len(beats)) and (beats[start_beat]<start_time)):
-                start_beat=start_beat+1;
-        if(end_time is not None):
-            while(end_beat>0 and (beats[end_beat]>end_time)):
-                end_beat = end_beat-1;
-        if(end_beat>start_beat):
-            return Event.FromStartTimes(beats[start_beat:end_beat], type='beats');
+        beats = self.getBeats(**kwargs)
+        start_beat = 0
+        end_beat = len(beats) - 1
+        if start_time is not None:
+            while (start_beat < len(beats)) and (beats[start_beat] < start_time):
+                start_beat = start_beat + 1
+        if end_time is not None:
+            while end_beat > 0 and (beats[end_beat] > end_time):
+                end_beat = end_beat - 1
+        if end_beat > start_beat:
+            return Event.FromStartTimes(beats[start_beat:end_beat], type='beats')
         else:
-            return None;
+            return None
 
     def getOnsetEnvelope(self, use_full_signal=True, force_recompute=False, centering=True, **kwargs):
         """use_full_signal only makes a difference in AudioClip subclass."""
         feature_name = 'onset_envelope';
-        if((not self.hasFeature(name=feature_name)) or force_recompute):
-            if(use_full_signal):
+        if ((not self.hasFeature(name=feature_name)) or force_recompute):
+            if (use_full_signal):
                 eval_sig = self.getFullSignal();
             else:
                 eval_sig = self.getSignal();
-            onsets = librosa.onset.onset_strength(y=eval_sig, sr=self.sampling_rate, centering=centering, hop_length=AUDIO_DEFAULT_HOP_LENGTH, **kwargs);
+            onsets = librosa.onset.onset_strength(y=eval_sig, sr=self.sampling_rate, centering=centering,
+                                                  hop_length=AUDIO_DEFAULT_HOP_LENGTH, **kwargs);
 
             self.setFeature(name=feature_name, value=onsets);
         return self.getFeature(name=feature_name);
 
-
-    def getMelSpectrogram(self, n_mels = 128, force_recompute=False):
+    def getMelSpectrogram(self, n_mels=128, force_recompute=False):
         feature_name = 'melspectrogram';
-        if((not self.hasFeature(name=feature_name)) or force_recompute):
-            params = dict( sr = self.sampling_rate,
-                                n_mels = n_mels);
+        if ((not self.hasFeature(name=feature_name)) or force_recompute):
+            params = dict(sr=self.sampling_rate,
+                          n_mels=n_mels);
             Spec = librosa.feature.melspectrogram(self.getSignal(), **params);
             self.setFeature(name=feature_name, value=librosa.power_to_db(Spec, ref=np.max), params=params);
         return self.getFeature(feature_name);
 
     def getSpectrogram(self, hop_length=None, force_recompute=False, **kwargs):
         feature_name = 'spectrogram';
-        if((not self.hasFeature(name=feature_name)) or force_recompute):
+        if ((not self.hasFeature(name=feature_name)) or force_recompute):
             # params = dict( sr = self.sampling_rate);
             # params.update(kwargs);
             params = dict(kwargs);
 
-            if(hop_length is None):
+            if (hop_length is None):
                 hop_length = AUDIO_DEFAULT_HOP_LENGTH;
             params['hop_length'] = hop_length;
 
             center = kwargs.get('center');
-            if(center is None):
+            if (center is None):
                 center = True;
             params['center'] = center;
             # print('recomputing {}'.format(hop_length))
@@ -647,19 +639,18 @@ class Audio(TimeSignal1D):
 
     def getRMSE(self, force_recompute=False, hop_length=None, frame_length=None):
         feature_name = 'rmse';
-        if((not self.hasFeature(name=feature_name)) or force_recompute):
-            if(frame_length is None):
+        if ((not self.hasFeature(name=feature_name)) or force_recompute):
+            if (frame_length is None):
                 frac_of_second = 0.05;
-                frame_length=max(1, int(self.sampling_rate*frac_of_second));
-            if(hop_length is None):
-                hop_length=int(math.floor(frame_length*0.5));
-            params = dict( hop_length = hop_length,
-                                center = True,
-                                frame_length = frame_length);
+                frame_length = max(1, int(self.sampling_rate * frac_of_second));
+            if (hop_length is None):
+                hop_length = int(math.floor(frame_length * 0.5));
+            params = dict(hop_length=hop_length,
+                          center=True,
+                          frame_length=frame_length);
             rmse = librosa.feature.rmse(y=self.getSignal(), **params);
             self.setFeature(name=feature_name, value=np.ndarray.flatten(rmse), params=params);
         return self.getFeature(feature_name);
-
 
     def getBeatTimeBefore(self, t):
         return self.getBeatBefore(t=t).start;
@@ -672,12 +663,11 @@ class Audio(TimeSignal1D):
     def getBeatIndexBefore(self, t):
         beats = self.getBeatEvents();
         for i, b in enumerate(beats):
-            if(b.start>t):
-                return i-1;
-        return len(beats)-1;
+            if (b.start > t):
+                return i - 1;
+        return len(beats) - 1;
 
-
-    def getTempogram(self, window_length=None, force_recompute=None, frame_rate=None, resample_rate = None, **kwargs):
+    def getTempogram(self, window_length=None, force_recompute=None, frame_rate=None, resample_rate=None, **kwargs):
         """
 
         :param self:
@@ -694,18 +684,18 @@ class Audio(TimeSignal1D):
             tpgparams.update(kwargs);
 
             sr = self.sampling_rate;
-            y=self.getSignal();
-            if(resample_rate is None):
+            y = self.getSignal();
+            if (resample_rate is None):
                 resample_rate = 22050;
-            if(sr>resample_rate):
-                print("resampling {}Hz to {}Hz".format(sr, resample_rate));
+            if (sr > resample_rate):
+                print(("resampling {}Hz to {}Hz".format(sr, resample_rate)));
                 y = librosa.core.resample(y, orig_sr=sr, target_sr=resample_rate);
                 sr = resample_rate;
                 print("resampled")
 
-            if(frame_rate is None):
+            if (frame_rate is None):
                 frame_rate = 30;
-            hop_length = int(round(truediv(sr,frame_rate)));
+            hop_length = int(round(truediv(sr, frame_rate)));
             win_length = int(round(window_length * frame_rate));
 
             tparams = dict(y=y,
@@ -713,13 +703,13 @@ class Audio(TimeSignal1D):
                            hop_length=hop_length,
                            win_length=win_length,
                            **kwargs);
-            tpgparams.update(dict(sr=sr,hop_length=hop_length, win_length=win_length));
+            tpgparams.update(dict(sr=sr, hop_length=hop_length, win_length=win_length));
             result = librosa.feature.tempogram(**tparams);
             ###########
             tempo_bpms = librosa.tempo_frequencies(result.shape[0], hop_length=hop_length, sr=sr)
             self.setFeature(name='tempogram_bpms', value=tempo_bpms);
             self.setFeature(name=feature_name, value=result, params=tpgparams);
-            self.setInfo(label='tempogram_params',value=tpgparams);
+            self.setInfo(label='tempogram_params', value=tpgparams);
 
         return self.getFeature(feature_name);
 
@@ -727,12 +717,13 @@ class Audio(TimeSignal1D):
         tempogram = self.getFeature('tempogram', force_recompute=True);
         tparams = self.getInfo('tempogram_params')
         toshow = tempogram;
-        if(window is not None):
-            wstart=int(round(window[0]*self.sampling_rate));
-            wend = int(round(window[1]*self.sampling_rate));
-            toshow = tempogram[:,wstart:wend];
+        if (window is not None):
+            wstart = int(round(window[0] * self.sampling_rate));
+            wend = int(round(window[1] * self.sampling_rate));
+            toshow = tempogram[:, wstart:wend];
 
-        mplt = librosa.display.specshow(toshow, sr=tparams['sr'], hop_length=tparams['hop_length'], x_axis = 'time', y_axis = 'tempo')
+        mplt = librosa.display.specshow(toshow, sr=tparams['sr'], hop_length=tparams['hop_length'], x_axis='time',
+                                        y_axis='tempo')
         plt.legend(frameon=True, framealpha=0.75)
         plt.set_cmap('coolwarm')
         plt.colorbar(format='%+2.0f dB')
@@ -782,7 +773,6 @@ class Audio(TimeSignal1D):
         plt.title('Time Signal');
         return mplt;
 
-
     FEATURE_FUNCS['melspectrogram'] = getMelSpectrogram;
     FEATURE_FUNCS['spectrogram'] = getSpectrogram;
     FEATURE_FUNCS['rmse'] = getRMSE;
@@ -819,7 +809,7 @@ def _make_wav(data, rate):
         # check that it is a "1D" list
         idata = iter(data)  # fails if not an iterable
         try:
-            iter(idata.next())
+            iter(next(idata))
             raise TypeError('Only lists of mono audio are '
                             'supported if numpy is not installed')
         except TypeError:

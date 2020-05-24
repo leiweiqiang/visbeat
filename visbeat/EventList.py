@@ -1,4 +1,4 @@
-from Event import *
+from .Event import *
 
 class EventList(AObject):
     """Event (class): An event in time, either in video or audio

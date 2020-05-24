@@ -1,11 +1,10 @@
-from __future__ import division
-
-from VisBeatImports import *
-from EventList import *
+from .VisBeatImports import *
+from .EventList import *
 import math
 
 DEFAULT_LEAD_TIME = 0;
 DEFAULT_TAIL_TIME = 0;
+
 
 class Warp(AObject):
     """Warp (class): defines how one time signal should be warped to another. Given primarily as source/target events to be matched.
@@ -19,34 +18,32 @@ class Warp(AObject):
 
     def __init__(self, path=None):
         AObject.__init__(self, path=path);
-        if(path):
+        if (path):
             self.loadFile();
-
 
     @staticmethod
     def FromEvents(source_events, target_events):
-        w = Warp();
-        sevents = source_events;
-        if(isinstance(source_events, EventList)):
-            sevents = source_events.events;
+        w = Warp()
+        sevents = source_events
+        if isinstance(source_events, EventList):
+            sevents = source_events.events
 
-        tevents = target_events;
-        if(isinstance(target_events, EventList)):
-            tevents = target_events.events;
+        tevents = target_events
+        if isinstance(target_events, EventList):
+            tevents = target_events.events
 
-        w.source_events=sevents;
-        w.target_events=tevents;
-        # w.repeatShorterEvents();
+        w.source_events = sevents
+        w.target_events = tevents
+        # w.repeatShorterEvents()
         return w
 
     @staticmethod
     def FromEventLists(source_eventlist, target_eventlist):
-        w = Warp();
-        w.source_events = source_eventlist.events;
-        w.target_events = target_eventlist.events;
+        w = Warp()
+        w.source_events = source_eventlist.events
+        w.target_events = target_eventlist.events
         # w.repeatShorterEvents();
         return w
-
 
     def initializeBlank(self):
         AObject.initializeBlank(self);
@@ -57,28 +54,23 @@ class Warp(AObject):
         # self.warp_func_st = None;
         # self.warp_func_ts = None;
 
-
     def getTargetStart(self, lead=None):
         target_start = self.target_events[0].getStartTime();
         if (lead is None):
             lead = min(target_start, DEFAULT_LEAD_TIME);
         return target_start - lead;
 
-
     def getTargetEnd(self, lead=None):
         lastind = min(len(self.source_events), len(self.target_events)) - 1;
         return self.target_events[lastind].getStartTime() + DEFAULT_TAIL_TIME;
-
 
     def getSourceStart(self):
         source_start = self.source_events[0].getUnrolledStartTime();
         return source_start;
 
-
     def getSourceEnd(self):
         lastind = min(len(self.source_events), len(self.target_events)) - 1;
         return self.source_events[lastind].getUnrolledStartTime();
-
 
     def getWarpedSourceStart(self, lead=None):
         source_start = self.source_events[0].getUnrolledStartTime();
@@ -86,76 +78,72 @@ class Warp(AObject):
             lead = min(source_start, DEFAULT_LEAD_TIME);
         return self.warpSourceTime(source_start - lead);
 
-
     def getWarpedSourceEnd(self, tail=None):
-        last_event = min(len(self.source_events), len(self.target_events)) - 1;
-        source_end = self.source_events[last_event].getUnrolledStartTime();
-        if (tail is None):
-            tail = DEFAULT_TAIL_TIME;
-        source_end = source_end + tail;
-        return self.warpSourceTime(source_end);
-
+        last_event = min(len(self.source_events), len(self.target_events)) - 1
+        source_end = self.source_events[last_event].getUnrolledStartTime()
+        if tail is None:
+            tail = DEFAULT_TAIL_TIME
+        source_end = source_end + tail
+        return self.warpSourceTime(source_end)
 
     def setWarpFunc(self, warp_type, **kwargs):
-        if (warp_type == 'square'):
-            self.warp_func = [Warp.SquareInterp, Warp.SquareInterp];
-        elif (warp_type == 'linear'):
-            self.warp_func = [Warp.LinearInterp, Warp.LinearInterp];
-        elif (warp_type == 'cubic'):
-            self.warp_func = [Warp.CubicInterp, Warp.CubicInterp];
-        elif (warp_type == 'quad'):
+        if warp_type == 'square':
+            self.warp_func = [Warp.SquareInterp, Warp.SquareInterp]
+        elif warp_type == 'linear':
+            self.warp_func = [Warp.LinearInterp, Warp.LinearInterp]
+        elif warp_type == 'cubic':
+            self.warp_func = [Warp.CubicInterp, Warp.CubicInterp]
+        elif warp_type == 'quad':
             self.warp_func = [
                 Warp.GetEventWarpFunc(self.source_events, self.target_events, Warp.WFunc_Quadratic(), **kwargs),
-                Warp.GetEventWarpFunc(self.target_events, self.source_events, Warp.WFunc_Quadratic(), **kwargs)];
-        elif (warp_type == 'mouth'):
+                Warp.GetEventWarpFunc(self.target_events, self.source_events, Warp.WFunc_Quadratic(), **kwargs)]
+        elif warp_type == 'mouth':
             self.warp_func = [
                 Warp.GetEventWarpFunc(self.source_events, self.target_events, Warp.WFunc_Mouth(**kwargs), **kwargs),
-                Warp.GetEventWarpFunc(self.target_events, self.source_events, Warp.WFunc_Mouth(**kwargs), **kwargs)];
-        elif (warp_type == 'weight'):
+                Warp.GetEventWarpFunc(self.target_events, self.source_events, Warp.WFunc_Mouth(**kwargs), **kwargs)]
+        elif warp_type == 'weight':
             self.warp_func = [
                 Warp.GetEventWarpFunc(self.source_events, self.target_events,
                                       Warp.WFunc_Weight(use_to_weights=None, **kwargs), **kwargs),
                 Warp.GetEventWarpFunc(self.target_events, self.source_events,
-                                      Warp.WFunc_Weight(use_to_weights=True, **kwargs), **kwargs)];
-        elif (warp_type == 'half_accel'):
+                                      Warp.WFunc_Weight(use_to_weights=True, **kwargs), **kwargs)]
+        elif warp_type == 'half_accel':
             self.warp_func = [
                 Warp.GetEventWarpFunc(self.source_events, self.target_events, Warp.WFunc_P(p=0.5),
                                       **kwargs),
                 Warp.GetEventWarpFunc(self.target_events, self.source_events, Warp.WFunc_P(p=0.5),
-                                      **kwargs)];
-        elif (warp_type == 'p'):
-            p = kwargs.get('p');
+                                      **kwargs)]
+        elif warp_type == 'p':
+            p = kwargs.get('p')
             self.warp_func = [
                 Warp.GetEventWarpFunc(self.source_events, self.target_events, Warp.WFunc_P(p=p),
                                       **kwargs),
                 Warp.GetEventWarpFunc(self.target_events, self.source_events, Warp.WFunc_P(p=p),
-                                      **kwargs)];
-        elif (warp_type == 'target_time_source_fraction'):
+                                      **kwargs)]
+        elif warp_type == 'target_time_source_fraction':
             self.warp_func = [
                 Warp.GetEventWarpFunc(self.source_events, self.target_events,
                                       Warp.WFunc_targettime_sourcefraction(**kwargs),
                                       **kwargs),
                 Warp.GetEventWarpFunc(self.target_events, self.source_events,
                                       Warp.WFunc_targettime_sourcefraction(**kwargs),
-                                      **kwargs)];
-        elif (warp_type == 'target_source_fractions'):
+                                      **kwargs)]
+        elif warp_type == 'target_source_fractions':
             self.warp_func = [
                 Warp.GetEventWarpFunc(self.source_events, self.target_events,
                                       Warp.WFunc_target_source_fractions(**kwargs),
                                       **kwargs),
                 Warp.GetEventWarpFunc(self.target_events, self.source_events,
                                       Warp.WFunc_target_source_fractions(**kwargs),
-                                      **kwargs)];
-        elif (warp_type is not None):
-            self.warp_func = [warp_type, warp_type];
+                                      **kwargs)]
+        elif warp_type is not None:
+            self.warp_func = [warp_type, warp_type]
 
-        self.setInfo('WarpType', warp_type);
-        return;
-
+        self.setInfo('WarpType', warp_type)
+        return
 
     def warpSourceTime(self, t):
         return self.warp_func[0](t, a_events=self.source_events, b_events=self.target_events);
-
 
     def warpSourceTimes(self, t):
         tw = t.copy();
@@ -163,17 +151,14 @@ class Warp(AObject):
             tw[a] = self.warpSourceTime(t[a]);
         return tw;
 
-
     def warpTargetTime(self, t):
         return self.warp_func[1](t, a_events=self.target_events, b_events=self.source_events);
-
 
     def warpTargetTimes(self, t):
         tw = t.copy();
         for a in range(len(t)):
             tw[a] = self.warpTargetTime(t[a]);
         return tw;
-
 
     def plot(self, xlim=None, sampling_rate=None, new_figure=None, render_control_points=True, render_labels=True,
              time_range=None, full_source_range=None, **kwargs):
@@ -184,8 +169,6 @@ class Warp(AObject):
         old_frame_time = truediv(1.0, sampling_rate);
         target_start = self.getTargetStart();
         target_end = self.getTargetEnd();
-
-
 
         # if(xlim is not None):
         #     target_start=xlim[0]
@@ -229,7 +212,6 @@ class Warp(AObject):
         if (new_figure is not None):
             return fig;
 
-
     def plotImage(self, xlim=None, sampling_rate=None):
         if (sampling_rate is None):
             sampling_rate = 30;
@@ -249,12 +231,10 @@ class Warp(AObject):
                               sampling_rate=sampling_rate, events=self.target_events, xlime=[0, 100], ylims=[0, 110]);
         return pim;
 
-
     def repeatShorterEvents(self, endpoints=False):
         n_events = max(len(self.source_events), len(self.target_events));
         self.source_events = Event.RepeatToLength(self.source_events, n=n_events, endpoints=endpoints);
         self.target_events = Event.RepeatToLength(self.target_events, n=n_events, endpoints=endpoints);
-
 
     @staticmethod
     def FromEvents(source_events, target_events):
@@ -263,7 +243,6 @@ class Warp(AObject):
         w.target_events = target_events;
         # w.repeatShorterEvents();
         return w
-
 
     @staticmethod
     def LinearInterp(t, a_events, b_events):
@@ -296,7 +275,6 @@ class Warp(AObject):
 
         next_weight = t_progress / (1.0 * a_event_gap);
         return (next_weight * next_b_event_time) + ((1.0 - next_weight) * prev_b_event_time);
-
 
     # additional_points = [];
     # for i in range(-10, 11):
@@ -336,7 +314,6 @@ class Warp(AObject):
 
         warpf.plot()
 
-
     @staticmethod
     def SquareInterp(t, a_events, b_events):
         n_events = min(len(a_events), len(b_events));
@@ -375,7 +352,6 @@ class Warp(AObject):
         # next_weight=bweight/sumweight;
         return (next_weight * next_b_event_time) + ((1.0 - next_weight) * prev_b_event_time);
 
-
     @staticmethod
     def GetEventWarpFunc(from_events, to_events, f, lead_time=None, **kwargs):
         start_cap_time = min(from_events[0].start, to_events[0].start);
@@ -405,7 +381,6 @@ class Warp(AObject):
 
         return rfunc;
 
-
     @staticmethod
     def WFunc_Quadratic():
         def rfunc(t, f_neighbors, t_neighbors, **kwargs):
@@ -424,7 +399,6 @@ class Warp(AObject):
             return (next_weight * to_times[1]) + ((1.0 - next_weight) * to_times[0]);
 
         return rfunc;
-
 
     @staticmethod
     def WFunc_Weight(use_to_weights=None, **kwargs):
@@ -458,12 +432,11 @@ class Warp(AObject):
 
         return rfunc;
 
-
     @staticmethod
     def WFunc_P(p=None, **kwargs):
         if (p is None):
             p = 0.5;
-        print("USING P WARP with P={}".format(p));
+        print(("USING P WARP with P={}".format(p)));
 
         def rfunc(t, f_neighbors, t_neighbors):
             from_times = Event.ToStartTimes(f_neighbors);
@@ -485,7 +458,6 @@ class Warp(AObject):
             return (next_weight * to_times[1]) + ((1.0 - next_weight) * to_times[0]);
 
         return rfunc;
-
 
     @staticmethod
     def WFunc_Mouth(p_acceleration_time=0.1, **kwargs):
@@ -518,7 +490,6 @@ class Warp(AObject):
             return (next_weight * to_times[1]) + ((1.0 - next_weight) * to_times[0]);
 
         return rfunc;
-
 
     @staticmethod
     def WFunc_targettime_sourcefraction(acceleration_target_time=0.1, acceleration_source_fraction=0.8, **kwargs):
@@ -569,7 +540,6 @@ class Warp(AObject):
 
         return rfunc;
 
-
     @staticmethod
     def WFunc_target_source_fractions(acceleration_target_fraction=0.8, acceleration_source_fraction=0.9, **kwargs):
         """
@@ -579,8 +549,6 @@ class Warp(AObject):
         :return:
         """
         lin_source_fraction = 1.0 - acceleration_source_fraction;
-
-
 
         def rfunc(t, f_neighbors, t_neighbors):
             print(acceleration_target_fraction)
@@ -623,7 +591,6 @@ class Warp(AObject):
 
         return rfunc;
 
-
     @staticmethod
     def WFunc_AB(const_factor, quad_factor, **kwargs):
         def rfunc(t, f_neighbors, t_neighbors):
@@ -640,7 +607,6 @@ class Warp(AObject):
             next_weight = math.pow(progress_frac, 2);
 
             return (next_weight * to_times[1]) + ((1.0 - next_weight) * to_times[0]);
-
 
     @staticmethod
     def ABWarp():
@@ -662,13 +628,11 @@ class Warp(AObject):
         next_weight = math.pow(progress_frac, 2);
         return (next_weight * next_to_event_time) + ((1.0 - next_weight) * prev_to_event_time);
 
-
     @staticmethod
     def CubicInterp(t, a_events, b_events):
         # def CubicInterp(a_events, b_events, t):
         f = Warp.CubicInterpFunc(a_events=a_events, b_events=b_events);
         return f(t);
-
 
     @staticmethod
     def LinearInterpFunc(a_events, b_events):
@@ -682,7 +646,6 @@ class Warp(AObject):
         elif (len(ae) > len(be)):
             ae = ae[:len(be)];
         return sp.interpolate.interp1d(ae, be, 'linear', bounds_error=False, fill_value='extrapolate');
-
 
     @staticmethod
     def CubicInterpFunc(a_events, b_events):

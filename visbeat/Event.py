@@ -1,4 +1,4 @@
-from VisBeatImports import *
+from .VisBeatImports import *
 
 class Event(AObject):
     """Event (class): An event in time, either in video or audio
@@ -442,7 +442,7 @@ class Event(AObject):
             post_avg_time=0.2,
             wait_time=0.1,
         )
-        tp_keys = time_params.keys();
+        tp_keys = list(time_params.keys());
         time_params.update(kwargs);
 
         delta = kwargs.get('delta');
@@ -469,11 +469,11 @@ class Event(AObject):
         if(not len(peakinds)):
             return [];
         if(index_offset is not None):
-            print('index offset {}'.format(index_offset))
+            print(('index offset {}'.format(index_offset)))
             for pi in range(len(peakinds)):
                 newi = peakinds[pi]+index_offset;
                 if(newi>=0 and newi<len(xvals)):
-                    print('{} to {}'.format(peakinds[pi], newi))
+                    print(('{} to {}'.format(peakinds[pi], newi)))
                     peakinds[pi]=newi;
 
 

@@ -10,8 +10,8 @@ def uiGetFilePath(initial_path=None):
         else:
             output = subprocess.check_output("osascript -e 'set theDocument to choose file with prompt \"Please select a document to process:\"' -e 'set theDocument to (the POSIX path of theDocument)'", shell=True)
         return output.replace('\n', '');
-    except subprocess.CalledProcessError, e:
-        print(e.output);
+    except subprocess.CalledProcessError as e:
+        print((e.output));
     # assert(False)
     #     grabpath = get_ipython().run_cell_magic(u'bash', u'', "osascript -e 'set theDocument to choose file with prompt \"Please select a document to process:\"' -e 'set theDocument to (the POSIX path of theDocument)'>&2")
 
@@ -22,8 +22,8 @@ def uiGetDirectory(initial_path=None):
         else:
             output = subprocess.check_output("osascript -e 'set thedir to choose folder with prompt \"Please select a directory:\"' -e 'set thedir to (the POSIX path of thedir)'", shell=True)
         return output.replace('\n', '');
-    except subprocess.CalledProcessError, e:
-        print(e.output);
+    except subprocess.CalledProcessError as e:
+        print((e.output));
     # assert(False)
 
 def uiGetSaveFilePath(initial_path=None, file_extension=None):
@@ -42,9 +42,9 @@ def uiGetSaveFilePath(initial_path=None, file_extension=None):
             if (not ostring.endswith(file_extension)):
                 ostring = ostring + file_extension;
         return ostring;
-    except subprocess.CalledProcessError, e:
+    except subprocess.CalledProcessError as e:
         AWARN('ERROR')
-        print(e.output);
+        print((e.output));
 
 def showInFinder(path):
     return openOSX(get_dir_from_path(path));

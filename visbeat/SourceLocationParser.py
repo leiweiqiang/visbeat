@@ -6,24 +6,28 @@ Based loosely on video backends from django embed video.
 import re
 import requests
 import os
+import urllib.parse
+
 import sys
-if sys.version_info.major == 3:
-    import urllib.parse as urlparse
-else:
-    import urlparse
+import urllib.parse as urlparse
+
+
+# if sys.version_info.major == 3:
+# else:
+#     import urllib.parse
+
 
 class SourceURL(object):
     """
     Modified from django embed video
     """
 
-
     allow_https = True
     is_secure = False
 
     @classmethod
     def SourceLocationType(cls):
-        return cls.__name__;
+        return cls.__name__
 
     def __init__(self, source_location):
         self.source_location_type = self.SourceLocationType()
@@ -36,18 +40,19 @@ class SourceURL(object):
         unique string to identify file
         :return:
         """
-        return self._getCode();
+        return self._getCode()
 
     def _getCode(self):
-        raise NotImplementedError;
+        raise NotImplementedError
 
     @code.setter
     def code(self, value):
-        self._setCode(value);
-    def _setCode(self, value):
-        raise NotImplementedError;
-    # </editor-fold>
+        self._setCode(value)
 
+    def _setCode(self, value):
+        raise NotImplementedError
+
+    # </editor-fold>
 
     @property
     def url(self):
@@ -55,6 +60,7 @@ class SourceURL(object):
         URL of video.
         """
         return self.get_url()
+
     def get_url(self):
         raise NotImplementedError
 
@@ -75,6 +81,7 @@ class SourceURL(object):
     @classmethod
     def is_valid(cls, url):
         return True if cls.re_detect.match(url) else False
+
 
 class WebSourceException(Exception):
     """ Parental class for all embed_media exceptions """
@@ -105,7 +112,7 @@ class YoutubeURL(SourceURL):
 
     @classmethod
     def SourceLocationType(cls):
-        return 'youtube';
+        return 'youtube'
 
     # Compiled regex (:py:func:`re.compile`) to search code in URL.
     # Example: ``re.compile(r'myvideo\.com/\?code=(?P<code>\w+)')``
@@ -150,7 +157,6 @@ class YoutubeURL(SourceURL):
         'mqdefault.jpg',
     ]
 
-
     def get_url(self):
         """
         Returns URL folded from :py:data:`pattern_url` and parsed code.
@@ -175,8 +181,8 @@ class YoutubeURL(SourceURL):
         if match:
             return match.group('code')
 
-        parsed_url = urlparse.urlparse(self._source_location)
-        parsed_qs = urlparse.parse_qs(parsed_url.query)
+        parsed_url = urllib.parse.urlparse(self._source_location)
+        parsed_qs = urllib.parse.parse_qs(parsed_url.query)
 
         if 'v' in parsed_qs:
             code = parsed_qs['v'][0]
@@ -202,30 +208,29 @@ class YoutubeURL(SourceURL):
         return None
 
 
-
 class FilePathURL(SourceURL):
     @classmethod
     def SourceLocationType(cls):
-        return 'file_path';
+        return 'file_path'
 
     def __init__(self, source_location):
         self.source_location_type = self.SourceLocationType()
-        self._source_location = source_location;
+        self._source_location = source_location
 
     @classmethod
     def is_valid(cls, source_location):
-        return os.path.isfile(source_location);
+        return os.path.isfile(source_location)
 
     def _getCode(self):
-        name_parts = os.path.splitext(os.path.basename(self._source_location));
-        return name_parts[0];
-
+        name_parts = os.path.splitext(os.path.basename(self._source_location))
+        return name_parts[0]
 
 
 SOURCE_LOCATION_TYPES = (
     YoutubeURL,
     FilePathURL,
 )
+
 
 def ParseSourseLocation(url):
     """

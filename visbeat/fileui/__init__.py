@@ -12,7 +12,7 @@ SUPPORTED = False;
 INITIAL_DIR ='./';
 
 if(PLATFORM == 'osx'):
-    import uipath
+    from . import uipath
 
     def GetFilePath(initial_path=None):
         if(initial_path is None):

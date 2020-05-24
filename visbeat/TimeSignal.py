@@ -1,8 +1,8 @@
-from VBObject import *
-from Event import *
+from .VBObject import *
+from .Event import *
 import math
 from operator import truediv
-from VisBeatImports import *
+from .VisBeatImports import *
 
 class TimeSignal(VBObject):
     """TimeSignal (class): A time signal, and a bunch of convenience functions to go with it.

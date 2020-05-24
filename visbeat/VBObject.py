@@ -1,8 +1,8 @@
 import os
 import json
-from VisBeatImports import *
-from AFuncDict import *
-from AObject import AObject
+from .VisBeatImports import *
+from .AFuncDict import *
+from .AObject import AObject
 
 class VBObject(AObject):
     """VBObject (class): This is a paarent class used to implement common serialization and other functions. There ends

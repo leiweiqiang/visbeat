@@ -1,4 +1,4 @@
-from Audio import *
+from .Audio import *
 
 class AudioClip(Audio):
     """AudioClip (class): A segment of a video, and a bunch of convenience functions to go with it.
@@ -8,7 +8,7 @@ class AudioClip(Audio):
     """
 
     def VBOBJECT_TYPE(self):
-        return 'AudioClip';
+        return 'AudioClip'
 
     def __init__(self, audio=None, start=None, end=None, path=None):
         assert(not (audio and path)), "provided both video object and path to VideoClip constructor."
@@ -17,14 +17,14 @@ class AudioClip(Audio):
         #self.initializeBlank();#gets called by parent
         if(start is None):
             start = 0;
-        if(end is None):
-            if(audio is not None):
-                end = audio.getDuration();
+        if end is None:
+            if audio is not None:
+                end = audio.getDuration()
             else:
-                end = truediv(len(self.x), self.sampling_rate);
+                end = truediv(len(self.x), self.sampling_rate)
 
-        self.start = start;
-        self.end = end;
+        self.start = start
+        self.end = end
 
 
         if(audio):

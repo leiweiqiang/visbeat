@@ -1,24 +1,23 @@
 # from Video import *
-from Image import *
-from Event import *
-from VisualBeat import *
+from .Image import *
+from .Event import *
+from .VisualBeat import *
 import librosa
 
 FEATURE_FUNCS = {};
 VIS_FUNCS = {};
 VISVIDEO_FUNCS = {};
 
-FLOW_LOG_EPSILON=1.0;
-FLOW_UNIT_GAIN=10000.0;
+FLOW_LOG_EPSILON = 1.0;
+FLOW_UNIT_GAIN = 10000.0;
 
 HISTOGRAM_FRAMES_PER_BEAT = 2;
 HISTOGRAM_DOWNSAMPLE_LEVELS = 3;
 
-
 VB_UPSAMPLE_FACTOR = 1.0;
 USING_OPENCV = Image.USING_OPENCV;
 
-if(USING_OPENCV):
+if (USING_OPENCV):
 
     ##########################################################################
     # ################ THESE ARE THE FUNCTIONS TO OVERRIDE! ################ #
@@ -36,6 +35,7 @@ if(USING_OPENCV):
         """
         return self.getVisibleImpactEnvelope(**kwargs);
 
+
     def visualBeatFunction(self, **kwargs):
         """
         Change to use different default strategy for selecting visual beats
@@ -51,6 +51,7 @@ if(USING_OPENCV):
         beat_params.update(kwargs);
         return self.getVisibleImpacts(**beat_params);
 
+
     # #################### This is how they are called #################### #
 
     def getLocalRhythmicSaliency(self, force_recompute=False, **kwargs):
@@ -58,10 +59,11 @@ if(USING_OPENCV):
         if ((not self.hasFeature(feature_name)) or force_recompute):
             params = dict();
             params.update(kwargs);
-            params.update({'force_recompute':force_recompute});
+            params.update({'force_recompute': force_recompute});
             result = self.localRhythmicSaliencyFunction(**params);
             self.setFeature(name=feature_name, value=result, params=params);
         return self.getFeature(feature_name);
+
 
     def getVisualBeats(self, force_recompute=False, **kwargs):
         feature_name = 'visual_beats';
@@ -72,30 +74,31 @@ if(USING_OPENCV):
             self.setFeature(name=feature_name, value=result, params=params);
         return self.getFeature(feature_name);
 
+
     # ##################################################################### #
 
     ##########################################################################
     # ###################################################################### #
     ##########################################################################
 
-
-
     def cvGetGrayFrame(self, f):
         colorframe = self.getFrame(f).astype(np.uint8);
         return ocv.cvtColor(colorframe, ocv.COLOR_RGB2GRAY);
+
 
     def getImageFromFrameGray(self, f):
         frame = self.getImageFromFrame(f);
         frame.RGB2Gray();
         return frame;
 
+
     def flow2row(ang, amp, bins, subdivs, n_shifts, density):
         h, w = ang.shape[:2];
         ncells = np.power(4, subdivs);
         nperd = np.power(2, subdivs);
 
-        xw = w-n_shifts[1];
-        yw = h-n_shifts[0];
+        xw = w - n_shifts[1];
+        yw = h - n_shifts[0];
 
         xcells = np.arange(nperd + 1, dtype=float);
         ycells = np.arange(nperd + 1, dtype=float);
@@ -103,17 +106,17 @@ if(USING_OPENCV):
         ycells = np.floor((ycells / (nperd)) * yw);
         # print(n_shifts)
 
-        ahis = np.zeros([ncells * bins, n_shifts[0]*n_shifts[1]]);
+        ahis = np.zeros([ncells * bins, n_shifts[0] * n_shifts[1]]);
 
         for dy in range(n_shifts[0]):
             for dx in range(n_shifts[1]):
-                ampwin = amp[dy:dy+yw,dx:dx+xw];
-                angwin = ang[dy:dy+yw,dx:dx+xw];
+                ampwin = amp[dy:dy + yw, dx:dx + xw];
+                angwin = ang[dy:dy + yw, dx:dx + xw];
                 cell_counter = 0;
                 for x in range(nperd):
                     for y in range(nperd):
-                        ystart=int(ycells[y]);
-                        yend = int(ycells[y+1]);
+                        ystart = int(ycells[y]);
+                        yend = int(ycells[y + 1]);
                         xstart = int(xcells[x]);
                         xend = int(xcells[x + 1]);
                         angcell = angwin[ystart:yend, xstart:xend];
@@ -121,14 +124,16 @@ if(USING_OPENCV):
                         cahis, cbinbounds = np.histogram(angcell.ravel(), bins=bins, range=(0, 2 * np.pi),
                                                          weights=ampcell.ravel(), density=density);
                         # print("ahis shape: {}\ncahis shape: {}\ndx, dy: {}, {}\ncell_counter: {}\nbins: {}\n".format(ahis.shape, cahis.shape, dx, dy, cell_counter, bins));
-                        ahis[cell_counter * bins:(cell_counter + 1) * bins, dx+dy*n_shifts[0]] = cahis;
+                        ahis[cell_counter * bins:(cell_counter + 1) * bins, dx + dy * n_shifts[0]] = cahis;
                         cell_counter = cell_counter + 1;
         return ahis;
 
+
     def getFlowFrame(self, frame_index):
-        prev_frame = self.cvGetGrayFrame(frame_index-1);
+        prev_frame = self.cvGetGrayFrame(frame_index - 1);
         this_frame = self.vbGetGrayFrame(frame_index);
         return cvDenseFlowFarneback(from_image=prev_frame, to_image=this_frame);
+
 
     def getFlowFramePolar(self, frame_index):
         """
@@ -137,43 +142,45 @@ if(USING_OPENCV):
         :return: polar where polar[:,:,0] is amplitude, and polar[:,:,1] is angle
         """
         flow = self.getFlowFrame(frame_index);
-        fx, fy = flow[:,:,0], flow[:,:,1];
+        fx, fy = flow[:, :, 0], flow[:, :, 1];
         polar = np.zeros(size(flow));
-        polar[:,:,0] = np.sqrt(fx * fx + fy * fy);
-        polar[:,:,1] = np.arctan2(fy, fx) + np.pi
+        polar[:, :, 0] = np.sqrt(fx * fx + fy * fy);
+        polar[:, :, 1] = np.arctan2(fy, fx) + np.pi
         return polar;
 
-    def computeDirectogramPowers(self, bins=None, dead_zone= 0.05, density=None, save_if_computed=True, noise_floor_percentile=None, **kwargs):
-        if(bins is None):
+
+    def computeDirectogramPowers(self, bins=None, dead_zone=0.05, density=None, save_if_computed=True,
+                                 noise_floor_percentile=None, **kwargs):
+        if (bins is None):
             bins = 128;
-        if(noise_floor_percentile is None):
+        if (noise_floor_percentile is None):
             noise_floor_percentile = 20;
 
-        print("Computing Flow Features with deadzone {}".format(dead_zone))
+        print(("Computing Flow Features with deadzone {}".format(dead_zone)))
 
         signal_dim = 128;
         m_histvals = np.zeros([signal_dim, self.n_frames(), 3]);
 
         flow_averages = np.zeros([self.n_frames(), 1]);
-        sampling_rate=self.sampling_rate;
+        sampling_rate = self.sampling_rate;
         duration = self.getDuration();
-        nsamples = sampling_rate*duration;
+        nsamples = sampling_rate * duration;
 
-        frame_start_times = np.linspace(0,duration,num=nsamples,endpoint=False);
-        frame_index_floats = frame_start_times*self.sampling_rate;
+        frame_start_times = np.linspace(0, duration, num=nsamples, endpoint=False);
+        frame_index_floats = frame_start_times * self.sampling_rate;
 
         lastframe = self.cvGetGrayFrame(frame_index_floats[0]);
 
-        start_timer=time.time();
-        last_timer=start_timer;
-        fcounter=0;
+        start_timer = time.time();
+        last_timer = start_timer;
+        fcounter = 0;
         counter = 0;
 
         for nf in range(len(frame_index_floats)):
-            nextframe= self.cvGetGrayFrame(frame_index_floats[nf]);
+            nextframe = self.cvGetGrayFrame(frame_index_floats[nf]);
             flow = cvDenseFlowFarneback(from_image=lastframe, to_image=nextframe);
             h, w = flow.shape[:2];
-            fx, fy = flow[:,:,0], flow[:,:,1];
+            fx, fy = flow[:, :, 0], flow[:, :, 1];
 
             # if(filter_median):
             #     fx = fx-np.median(fx.ravel());
@@ -181,43 +188,45 @@ if(USING_OPENCV):
             #     assert(False), "SHOULDNT BE FILTERING MEDIAN! VESTIGIAL CODE"
 
             ang = np.arctan2(fy, fx) + np.pi
-            amp = np.sqrt(fx*fx+fy*fy);
+            amp = np.sqrt(fx * fx + fy * fy);
 
-            winstarty = int(dead_zone*h);
-            winendy = h-winstarty;
-            winstartx = int(dead_zone*w);
-            winendx = w-winstartx;
+            winstarty = int(dead_zone * h);
+            winendy = h - winstarty;
+            winstartx = int(dead_zone * w);
+            winendx = w - winstartx;
             angw = ang[winstarty:winendy, winstartx:winendx];
             ampw = amp[winstarty:winendy, winstartx:winendx];
 
-            mask0 = (ampw>np.percentile(ampw,noise_floor_percentile)).astype(float);
+            mask0 = (ampw > np.percentile(ampw, noise_floor_percentile)).astype(float);
             ahis0, cbinbounds = np.histogram(angw.ravel(), bins=bins, range=(0, 2 * np.pi),
                                              weights=mask0.ravel(), density=density);
             ahis1, cbinbounds1 = np.histogram(angw.ravel(), bins=bins, range=(0, 2 * np.pi),
-                                             weights=ampw.ravel(), density=density);
+                                              weights=ampw.ravel(), density=density);
             ahis2, cbinbounds2 = np.histogram(angw.ravel(), bins=bins, range=(0, 2 * np.pi),
-                                             weights=np.power(ampw, 2).ravel(), density=density);
+                                              weights=np.power(ampw, 2).ravel(), density=density);
 
             m_histvals[:, counter, 0] = ahis0;
             m_histvals[:, counter, 1] = ahis1;
             m_histvals[:, counter, 2] = ahis2;
 
-            lastframe=nextframe;
-            counter+=1;
-            fcounter+=1;
+            lastframe = nextframe;
+            counter += 1;
+            fcounter += 1;
 
-            if(not (fcounter%50)):
-                if((time.time()-last_timer)>10):
-                    last_timer=time.time();
-                    print("{}%% done after {} seconds...".format(100.0*truediv(fcounter,len(frame_index_floats)), last_timer-start_timer));
-        params = dict( bins = bins,
-                        deadzone=dead_zone,
-                        density=density);
+            if (not (fcounter % 50)):
+                if ((time.time() - last_timer) > 10):
+                    last_timer = time.time();
+                    print(("{}% done after {} seconds...".format(100.0 * truediv(fcounter, len(frame_index_floats)),
+                                                                 last_timer - start_timer)));
+        params = dict(bins=bins,
+                      deadzone=dead_zone,
+                      density=density);
         params.update(kwargs);
         self.setFeature(name='directogram_powers', value=m_histvals, params=params);
-        if(save_if_computed):
+        if (save_if_computed):
             self.save(features_to_save=['directogram_powers']);
         return m_histvals;
+
 
     ######################### Other Features #############################
 
@@ -227,15 +236,17 @@ if(USING_OPENCV):
             flow_powers = self.computeDirectogramPowers(**kwargs);
         return self.getFeature(feature_name);
 
+
     # def getDirectogram(self, bins = None, weights=None, density=None, force_recompute=False, save_if_computed=True, **kwargs):
     def getDirectogram(self, **kwargs):
         feature_name = 'directogram';
         force_recompute = kwargs.get('force_recompute');
-        if((not self.hasFeature(feature_name)) or force_recompute):
+        if ((not self.hasFeature(feature_name)) or force_recompute):
             flow_powers = self.getFeature('directogram_powers');
-            fh = flow_powers[:,:,1];
+            fh = flow_powers[:, :, 1];
             self.setFeature(name='directogram', value=fh, params=kwargs);
         return self.getFeature(feature_name);
+
 
     def getVisualTempo(self, force_recompute=None, **kwargs):
         feature_name = 'visual_tempo';
@@ -245,7 +256,8 @@ if(USING_OPENCV):
             self.setFeature(name=feature_name, value=result, params=kwargs);
         return self.getFeature(feature_name);
 
-    def getVisualTempogram(self, window_length=None, force_recompute=None, norm_columns = None, **kwargs):
+
+    def getVisualTempogram(self, window_length=None, force_recompute=None, norm_columns=None, **kwargs):
         """
 
         :param self:
@@ -256,21 +268,21 @@ if(USING_OPENCV):
         """
         feature_name = 'visual_tempogram';
         if ((not self.hasFeature(feature_name)) or force_recompute):
-            if(window_length is None):
+            if (window_length is None):
                 window_length = DEFAULT_TEMPOGRAM_WINDOW_SECONDS;
             params = kwargs;
             params.update({'force_recompute': force_recompute});
-            vbe = self.computeImpactEnvelope(cut_suppression_seconds = None);
+            vbe = self.computeImpactEnvelope(cut_suppression_seconds=None);
             onset_envelope = vbe;
             win_length = int(round(window_length * self.sampling_rate));
             sr = self.sampling_rate;
             hop_length = 1;
 
-            center=kwargs.get('center');
-            if(center is None):
-                center=True;
-            window='hann'
-            norm=np.inf;
+            center = kwargs.get('center');
+            if (center is None):
+                center = True;
+            window = 'hann'
+            norm = np.inf;
             ac_window = librosa.filters.get_window(window, win_length, fftbins=True)
 
             # Center the autocorrelation windows
@@ -281,17 +293,17 @@ if(USING_OPENCV):
                                         mode='linear_ramp', end_values=[0, 0])
             # Carve onset envelope into frames
             odf_frame = librosa.util.frame(onset_envelope,
-                                   frame_length=win_length,
-                                   hop_length=hop_length)
+                                           frame_length=win_length,
+                                           hop_length=hop_length)
             # Truncate to the length of the original signal
             if center:
                 odf_frame = odf_frame[:, :n]
 
-            odf_frame = librosa.util.normalize(odf_frame,axis=0,norm=norm)
-            if(norm_columns is None):
+            odf_frame = librosa.util.normalize(odf_frame, axis=0, norm=norm)
+            if (norm_columns is None):
                 norm_columns = True;
 
-            if(norm_columns):
+            if (norm_columns):
                 # Window, autocorrelate, and normalize
                 result = librosa.util.normalize(
                     librosa.core.audio.autocorrelate(odf_frame * ac_window[:, np.newaxis], axis=0), norm=norm, axis=0);
@@ -306,13 +318,15 @@ if(USING_OPENCV):
 
         return self.getFeature(feature_name);
 
+
     def getVisibleImpactEnvelope(self, force_recompute=False, **kwargs):
         feature_name = 'impact_envelope';
         if ((not self.hasFeature(feature_name)) or force_recompute):
             params = kwargs;
-            result = self.computeImpactEnvelope(forward=True, backward = False, **kwargs);
+            result = self.computeImpactEnvelope(forward=True, backward=False, **kwargs);
             self.setFeature(name=feature_name, value=result, params=params);
         return self.getFeature(feature_name);
+
 
     def getForwardVisibleImpactEnvelope(self, force_recompute=False, **kwargs):
         """
@@ -325,40 +339,45 @@ if(USING_OPENCV):
         feature_name = 'forward_visual_impact_envelope';
         if ((not self.hasFeature(feature_name)) or force_recompute):
             params = kwargs;
-            result = self.computeImpactEnvelope(forward=True, backward = False, **kwargs);
+            result = self.computeImpactEnvelope(forward=True, backward=False, **kwargs);
             self.setFeature(name=feature_name, value=result, params=params);
         return self.getFeature(feature_name);
+
 
     def getBackwardVisibleImpactEnvelope(self, force_recompute=False, **kwargs):
         feature_name = 'backward_visual_impact_envelope';
         if ((not self.hasFeature(feature_name)) or force_recompute):
             params = kwargs;
-            result = self.computeImpactEnvelope(forward=False, backward = True, **kwargs);
+            result = self.computeImpactEnvelope(forward=False, backward=True, **kwargs);
             self.setFeature(name=feature_name, value=result, params=params);
         return self.getFeature(feature_name);
+
 
     def getBothWayVisibleImpactEnvelope(self, force_recompute=False, **kwargs):
         feature_name = 'both_way_visual_impact_envelope';
         if ((not self.hasFeature(feature_name)) or force_recompute):
             params = kwargs;
-            result = self.computeImpactEnvelope(forward=True, backward = True, **kwargs);
+            result = self.computeImpactEnvelope(forward=True, backward=True, **kwargs);
             self.setFeature(name=feature_name, value=result, params=params);
         return self.getFeature(feature_name);
+
 
     def getVisibleImpactEnvelopePowers(self, force_recompute=False, **kwargs):
         feature_name = 'impact_envelope_powers';
         if ((not self.hasFeature(feature_name)) or force_recompute):
             params = kwargs;
-            result0 = self.computeImpactEnvelope(power= 0, **params);
+            result0 = self.computeImpactEnvelope(power=0, **params);
             result = np.zeros([len(result0), 3]);
             result[:, 0] = result0;
-            result[:, 1] = self.computeImpactEnvelope(power= 1, **params);
+            result[:, 1] = self.computeImpactEnvelope(power=1, **params);
             result[:, 2] = self.computeImpactEnvelope(power=2, **params);
             self.setFeature(name=feature_name, value=result, params=params);
         return self.getFeature(feature_name);
 
+
     def getCutTimes(self):
         return Event.ToStartTimes(self.getCutEvents());
+
 
     def getCutEvents(self, force_recompute=False, **kwargs):
         """
@@ -380,8 +399,8 @@ if(USING_OPENCV):
             medall = np.median(imc);
             cutsig = np.true_divide(medsig, medall)
             cut_detection_ratio = kwargs.get('cut_detection_ratio');
-            if(cut_detection_ratio is None):
-                cut_detection_ratio=CUT_DETECTION_RATIO;
+            if (cut_detection_ratio is None):
+                cut_detection_ratio = CUT_DETECTION_RATIO;
             clipsig = (cutsig > cut_detection_ratio).astype(float);
             clip_floorsig = (cutsig > CUT_DETECTION_FLOOR).astype(float);
             clipsig = np.multiply(clipsig, clip_floorsig);
@@ -397,43 +416,47 @@ if(USING_OPENCV):
             self.setFeature(name=feature_name, value=result, params=params);
         return self.getFeature(feature_name);
 
+
     def visualBeatsFromEvents(self, events):
         def downsample_hist(sig, levels):
             nperbin = np.power(2, levels);
             rshp = sig.reshape(-1, nperbin);
             return rshp.sum(axis=1);
-        if(self.hasFeature('impact_envelope')):
-            svbe=self.getFeature('impact_envelope');
+
+        if (self.hasFeature('impact_envelope')):
+            svbe = self.getFeature('impact_envelope');
         else:
-            svbe=self.computeImpactEnvelope(cut_suppression_seconds = None);
+            svbe = self.computeImpactEnvelope(cut_suppression_seconds=None);
         flow_powers = self.getFeature('directogram_powers');
         vis_tempogram = self.getFeature('visual_tempogram');
 
         vbeats = [];
         for e in events:
             b = VisualBeat.FromEvent(e);
-            ei = int(round(b.start*self.sampling_rate*VB_UPSAMPLE_FACTOR));
+            ei = int(round(b.start * self.sampling_rate * VB_UPSAMPLE_FACTOR));
             b.weight = svbe[ei];
 
-            histsize = 128/int(np.power(2,HISTOGRAM_DOWNSAMPLE_LEVELS))
+            histsize = 128 / int(np.power(2, HISTOGRAM_DOWNSAMPLE_LEVELS))
             histslice = np.zeros([histsize, HISTOGRAM_FRAMES_PER_BEAT]);
             histslice = np.squeeze(np.mean(histslice, 1));
             b.flow_histogram = downsample_hist(sig=histslice, levels=HISTOGRAM_DOWNSAMPLE_LEVELS);
             b.flow_histogram = np.divide(b.flow_histogram, np.sum(b.flow_histogram));
-            b.local_autocor = vis_tempogram[:,ei];
-            b.local_autocor = b.local_autocor/np.max(b.local_autocor);
-            b.sampling_rate=self.sampling_rate;
+            b.local_autocor = vis_tempogram[:, ei];
+            b.local_autocor = b.local_autocor / np.max(b.local_autocor);
+            b.sampling_rate = self.sampling_rate;
             vbeats.append(b);
         return vbeats;
+
 
     def getVisualBeatTimes(self, **kwargs):
         return Event.ToStartTimes(self.getVisualBeats(**kwargs));
 
+
     def getDirectionalFlux(self,
-                            f_sigma=None,
-                            median_kernel=None,
-                            power=None,
-                            **kwargs):
+                           f_sigma=None,
+                           median_kernel=None,
+                           power=None,
+                           **kwargs):
         """
         The visual impact complement of a spectral flux matrix
         :param self:
@@ -456,28 +479,29 @@ if(USING_OPENCV):
         if (median_kernel is None):
             median_kernel = [3, 3];
 
-        if(power is None):
+        if (power is None):
             power = 1;
 
         powers = self.getFeature('directogram_powers');
-        im = powers[:,:,power].copy();
+        im = powers[:, :, power].copy();
         if (f_sigma is not None):
             im = sp.ndimage.filters.gaussian_filter(input=im, sigma=f_sigma, order=0);
 
         im = sp.signal.medfilt(im, median_kernel);
         return d_x(im);
 
+
     def computeImpactEnvelope(self,
-                             forward=True,
-                             backward = False,
-                             f_sigma=None,
-                             median_kernel=None,
-                             highpass_window_seconds= 0.8,
-                             cut_percentile=99,
-                             power=None,
-                             crop = None,
-                             normalize = True,
-                             **kwargs):
+                              forward=True,
+                              backward=False,
+                              f_sigma=None,
+                              median_kernel=None,
+                              highpass_window_seconds=0.8,
+                              cut_percentile=99,
+                              power=None,
+                              crop=None,
+                              normalize=True,
+                              **kwargs):
         """
 
         :param self:
@@ -497,63 +521,64 @@ if(USING_OPENCV):
         inputargs = dict(f_sigma=f_sigma,
                          median_kernel=median_kernel,
                          power=power,
-                         crop = crop);
+                         crop=crop);
 
         inputargs.update(kwargs);
         im_d = self.getDirectionalFlux(**inputargs);
 
-        if(forward and backward):
+        if (forward and backward):
             im = np.fabs(im_d);
-        elif(forward):
+        elif (forward):
             im = -im_d;
             im = np.clip(im, 0, None)
-        elif(backward):
+        elif (backward):
             im = im_d;
             im = np.clip(im, 0, None)
         else:
-            assert(False), "Must be at least one of either forward or backward."
+            assert (False), "Must be at least one of either forward or backward."
 
         vimpact = np.squeeze(np.mean(im, 0));
         sampling_rate = self.sampling_rate;
-        if(upsample_factor is not None and (upsample_factor>1)):
+        if (upsample_factor is not None and (upsample_factor > 1)):
             newlen = upsample_factor * len(vimpact);
-            sampling_rate = upsample_factor*sampling_rate;
+            sampling_rate = upsample_factor * sampling_rate;
             vimpact = sp.signal.resample(vimpact, newlen);
 
-        if(highpass_window_seconds):
+        if (highpass_window_seconds):
             order = kwargs.get('highpass_order');
-            if(order is None):
+            if (order is None):
                 order = 5;
             cutoff = truediv(1.0, highpass_window_seconds);
-            normal_cutoff = cutoff / (sampling_rate*0.5);
+            normal_cutoff = cutoff / (sampling_rate * 0.5);
             b, a = sp.signal.butter(order, normal_cutoff, btype='high', analog=False)
             vimpact = sp.signal.filtfilt(b, a, vimpact);
-
 
         normfactor = np.max(np.fabs(vimpact[:]));
 
         if (cut_percentile is not None):
             fx = np.fabs(vimpact);
             pv = np.percentile(fx, cut_percentile);
-            pvlow = np.percentile(fx, cut_percentile-1);
+            pvlow = np.percentile(fx, cut_percentile - 1);
             normfactor = pv;
             ptile = (vimpact > pv).astype(float);
             pntile = (vimpact < -pv).astype(float);
-            pboth = ptile+pntile;
+            pboth = ptile + pntile;
             einds = np.flatnonzero(pboth);
             lastind = -2;
             for j in range(len(einds)):
-                if(einds[j]==(lastind+1)):
-                    vimpact[einds[j]]=0;
+                if (einds[j] == (lastind + 1)):
+                    vimpact[einds[j]] = 0;
                 else:
-                    vimpact[einds[j]]=pvlow;
+                    vimpact[einds[j]] = pvlow;
 
-        if(normalize):
+        if (normalize):
             vimpact = np.true_divide(vimpact, normfactor);
         return vimpact;
 
+
     # 0.8, cut_suppression_seconds = 0.4,
-    def computeImpactEnvelopeOld(self, f_sigma=None, median_kernel=None, highpass_window_seconds= 0.8, cut_percentile=99, power=None, crop = None, normalize=None, **kwargs):
+    def computeImpactEnvelopeOld(self, f_sigma=None, median_kernel=None, highpass_window_seconds=0.8, cut_percentile=99,
+                                 power=None, crop=None, normalize=None, **kwargs):
         """
         I believe this is the version of the function that I used in the original paper. Keeping it around for record.
         :param self:
@@ -567,6 +592,7 @@ if(USING_OPENCV):
         :param kwargs:
         :return:
         """
+
         def d_x(im):
             # d_im = np.zeros(im.shape, dtype=np.float128);
             d_im = np.zeros(im.shape);
@@ -580,14 +606,14 @@ if(USING_OPENCV):
         if (median_kernel is None):
             median_kernel = [3, 3];
 
-        if(power is None):
+        if (power is None):
             power = 1;
 
         upsample_factor = kwargs.get('upsample_factor');
 
         powers = self.getFeature('directogram_powers');
-        print("computing impact env with power {}".format(power));
-        im = powers[:,:,power].copy();
+        print(("computing impact env with power {}".format(power)));
+        im = powers[:, :, power].copy();
 
         if (f_sigma is not None):
             im = sp.ndimage.filters.gaussian_filter(input=im, sigma=f_sigma, order=0);
@@ -599,58 +625,58 @@ if(USING_OPENCV):
         svbe = np.squeeze(np.mean(im, 0));
         sampling_rate = self.sampling_rate;
 
-        if(upsample_factor is not None and (upsample_factor>1)):
+        if (upsample_factor is not None and (upsample_factor > 1)):
             newlen = upsample_factor * len(svbe);
-            sampling_rate = upsample_factor*sampling_rate;
+            sampling_rate = upsample_factor * sampling_rate;
             svbe = sp.signal.resample(svbe, newlen);
 
-        if(highpass_window_seconds):
+        if (highpass_window_seconds):
             order = kwargs.get('highpass_order');
-            if(order is None):
+            if (order is None):
                 order = 5;
             cutoff = truediv(1.0, highpass_window_seconds);
-            normal_cutoff = cutoff / (sampling_rate*0.5);
+            normal_cutoff = cutoff / (sampling_rate * 0.5);
             b, a = sp.signal.butter(order, normal_cutoff, btype='high', analog=False)
             svbe = sp.signal.filtfilt(b, a, svbe);
-
 
         normfactor = np.max(np.fabs(svbe[:]));
 
         if (cut_percentile is not None):
             fx = np.fabs(svbe);
             pv = np.percentile(fx, cut_percentile);
-            pvlow = np.percentile(fx, cut_percentile-1);
+            pvlow = np.percentile(fx, cut_percentile - 1);
             normfactor = pv;
             ptile = (svbe > pv).astype(float);
             pntile = (svbe < -pv).astype(float);
-            pboth = ptile+pntile;
+            pboth = ptile + pntile;
             einds = np.flatnonzero(pboth);
             lastind = -2;
             for j in range(len(einds)):
-                if(einds[j]==(lastind+1)):
-                    svbe[einds[j]]=0;
+                if (einds[j] == (lastind + 1)):
+                    svbe[einds[j]] = 0;
                 else:
-                    svbe[einds[j]]=pvlow;
+                    svbe[einds[j]] = pvlow;
 
-        if(normalize is not False):
+        if (normalize is not False):
             svbe = np.true_divide(svbe, normfactor);
         return svbe;
 
-    def getVisibleImpacts(self, force_recompute=False, include_cut_events = None, **kwargs):
+
+    def getVisibleImpacts(self, force_recompute=False, include_cut_events=None, **kwargs):
         feature_name = 'visible_impacts';
         if ((not self.hasFeature(feature_name)) or force_recompute):
             params = kwargs;
             svbe = self.getFeature('impact_envelope', **kwargs);
             upsample_factor = kwargs.get('upsample_factor');
-            if(upsample_factor is None):
+            if (upsample_factor is None):
                 upsample_factor = 1;
-            u_sampling_rate = self.sampling_rate*upsample_factor;
+            u_sampling_rate = self.sampling_rate * upsample_factor;
 
             peak_params = self._getDefaultPeakPickingTimeParams();
-            peak_params.update(kwargs); # if params given in arguments, those will override the defaults here.
+            peak_params.update(kwargs);  # if params given in arguments, those will override the defaults here.
 
             v_events = Event.FromSignalPeaks(signal=svbe, sampling_rate=u_sampling_rate, **peak_params);
-            if(include_cut_events):
+            if (include_cut_events):
                 cut_events = self.getFeature('cut_events');
                 v_events = v_events + cut_events;
                 Event.Sort(v_events);
@@ -659,17 +685,19 @@ if(USING_OPENCV):
             self.setFeature(name=feature_name, value=result, params=params);
         return self.getFeature(feature_name);
 
-    def getForwardVisibleImpacts(self, force_recompute=False, include_cut_events = None, **kwargs):
+
+    def getForwardVisibleImpacts(self, force_recompute=False, include_cut_events=None, **kwargs):
         feature_name = 'forward_visual_beats';
         if ((not self.hasFeature(feature_name)) or force_recompute):
             params = kwargs;
             local_saliency = self.getFeature('forward_visual_impact_envelope', **kwargs);
             upsample_factor = kwargs.get('upsample_factor');
-            if(upsample_factor is None):
+            if (upsample_factor is None):
                 upsample_factor = 1;
-            u_sampling_rate = self.sampling_rate*upsample_factor;
-            v_events = Event.FromSignalPeaks(signal=local_saliency, sampling_rate=u_sampling_rate, event_type= 'forward', **kwargs);
-            if(include_cut_events):
+            u_sampling_rate = self.sampling_rate * upsample_factor;
+            v_events = Event.FromSignalPeaks(signal=local_saliency, sampling_rate=u_sampling_rate, event_type='forward',
+                                             **kwargs);
+            if (include_cut_events):
                 cut_events = self.getFeature('cut_events');
                 v_events = v_events + cut_events;
                 Event.Sort(v_events);
@@ -677,17 +705,18 @@ if(USING_OPENCV):
             self.setFeature(name=feature_name, value=result, params=params);
         return self.getFeature(feature_name);
 
-    def getBackwardVisibleImpacts(self, force_recompute=False, include_cut_events = None, **kwargs):
+
+    def getBackwardVisibleImpacts(self, force_recompute=False, include_cut_events=None, **kwargs):
         feature_name = 'backward_visual_beats';
         if ((not self.hasFeature(feature_name)) or force_recompute):
             params = kwargs;
             local_saliency = self.getFeature('backward_visual_impact_envelope', **kwargs);
             upsample_factor = kwargs.get('upsample_factor');
-            if(upsample_factor is None):
+            if (upsample_factor is None):
                 upsample_factor = 1;
-            u_sampling_rate = self.sampling_rate*upsample_factor;
+            u_sampling_rate = self.sampling_rate * upsample_factor;
             v_events = Event.FromSignalPeaks(signal=local_saliency, sampling_rate=u_sampling_rate, **kwargs);
-            if(include_cut_events):
+            if (include_cut_events):
                 cut_events = self.getFeature('cut_events');
                 v_events = v_events + cut_events;
                 Event.Sort(v_events);
@@ -697,8 +726,8 @@ if(USING_OPENCV):
         return self.getFeature(feature_name);
 
 
-    def findAccidentalDanceSequences(self, target_n_beats = 7, n_samples=25, delta_range = None):
-        if(delta_range is None):
+    def findAccidentalDanceSequences(self, target_n_beats=7, n_samples=25, delta_range=None):
+        if (delta_range is None):
             delta_range = [0.02, 0.5];
 
         deltas = np.linspace(delta_range[0], delta_range[1], num=n_samples, endpoint=True);
@@ -708,10 +737,10 @@ if(USING_OPENCV):
             peak_vars = self._getDefaultPeakPickingTimeParams(delta=delta);
             sequences = self.getVisualBeatSequences(peak_vars=peak_vars, print_summary=False);
             # print("Delta {} has top sequence with {} beats".format(delta, len(sequences[0])));
-            if(len(sequences[0])<=target_n_beats):
+            if (len(sequences[0]) <= target_n_beats):
                 deltapick = delta;
                 break;
-        print("Selected delta value {}".format(deltapick));
+        print(("Selected delta value {}".format(deltapick)));
         return sequences;
 
 
@@ -726,9 +755,9 @@ if(USING_OPENCV):
                                break_on_cuts=None,
                                peak_vars=None,
                                time_range=None,
-                               n_return = None,
-                               unsorted = False,
-                               print_summary = True,
+                               n_return=None,
+                               unsorted=False,
+                               print_summary=True,
                                **kwargs):
         """
 
@@ -746,53 +775,54 @@ if(USING_OPENCV):
         """
         if (peak_vars is not None):
             # impacts = self.getFeature('visible_impacts', force_recompute=True, **peak_vars);
-            impacts = self.getVisualBeats(force_recompute = True, **peak_vars);
+            impacts = self.getVisualBeats(force_recompute=True, **peak_vars);
         else:
             # impacts = self.getFeature('visible_impacts');
             impacts = self.getVisualBeats();
 
-        if(time_range is not None):
+        if (time_range is not None):
             impactseg = [];
             for i in impacts:
-                if(i.start>time_range[0] and i.start < time_range[1]):
+                if (i.start > time_range[0] and i.start < time_range[1]):
                     impactseg.append(i);
             impacts = impactseg;
-
 
         if (search_tempo is not None):
             tempo = search_tempo;
             beat_time = np.true_divide(60.0, tempo);
             sequences = VisualBeat.PullOptimalPaths_Basic(impacts, target_period=beat_time, unary_weight=unary_weight,
-                                                      binary_weight=binary_weight, break_on_cuts=break_on_cuts,
-                                                      window_size=search_window);
+                                                          binary_weight=binary_weight, break_on_cuts=break_on_cuts,
+                                                          window_size=search_window);
 
-        elif(target_period is not None):
-            sequences = VisualBeat.PullOptimalPaths_Basic(impacts, target_period=target_period, unary_weight=unary_weight,
+        elif (target_period is not None):
+            sequences = VisualBeat.PullOptimalPaths_Basic(impacts, target_period=target_period,
+                                                          unary_weight=unary_weight,
                                                           binary_weight=binary_weight, break_on_cuts=break_on_cuts,
                                                           window_size=search_window);
         else:
-            sequences = VisualBeat.PullOptimalPaths_Autocor(impacts, unary_weight=unary_weight, binary_weight=binary_weight,
-                                                        break_on_cuts=break_on_cuts, window_size=search_window);
+            sequences = VisualBeat.PullOptimalPaths_Autocor(impacts, unary_weight=unary_weight,
+                                                            binary_weight=binary_weight,
+                                                            break_on_cuts=break_on_cuts, window_size=search_window);
 
         r_sequences = [];
 
-        if(min_beat_limit is None):
+        if (min_beat_limit is None):
             min_beat_limit = 2;
-        if(max_beat_limit is None):
-            max_beat_limit = len(impacts)+1;
+        if (max_beat_limit is None):
+            max_beat_limit = len(impacts) + 1;
 
         for S in sequences:
             if ((len(S) > min_beat_limit) and (len(S) < max_beat_limit)):
                 r_sequences.append(S);
 
-        if(not unsorted):
+        if (not unsorted):
             r_sequences.sort(key=len, reverse=True);
-            if(n_return is not None):
+            if (n_return is not None):
                 r_sequences = r_sequences[:n_return];
-        if(print_summary):
-            print("{} segments".format(len(r_sequences)));
+        if (print_summary):
+            print(("{} segments".format(len(r_sequences))));
             for s in range(len(r_sequences)):
-                print("Segment {} has {} beats".format(s, len(r_sequences[s])));
+                print(("Segment {} has {} beats".format(s, len(r_sequences[s]))));
 
         return r_sequences;
 
@@ -807,7 +837,7 @@ if(USING_OPENCV):
                                  binary_weight=None,
                                  break_on_cuts=None,
                                  peak_vars=None,
-                                 n_return = None,
+                                 n_return=None,
                                  time_range=None, **kwargs):
         """
 
@@ -842,8 +872,8 @@ if(USING_OPENCV):
             time_range=time_range);
 
         seqs = self.getVisualBeatSequences(**sequence_args)
-        print("sequence arguments were:\n{}".format(sequence_args));
-        print("There were {} sequences total".format(len(seqs)));
+        print(("sequence arguments were:\n{}".format(sequence_args)));
+        print(("There were {} sequences total".format(len(seqs))));
         nclips = 0;
         rsegments = [];
         for S in seqs:
@@ -855,47 +885,59 @@ if(USING_OPENCV):
         # if (n_return is not None):
         #     rsegments = rsegments[:n_return];
 
-        Event.PlotSignalAndEvents(self.getFeature('impact_envelope'),  sampling_rate=self.sampling_rate*VB_UPSAMPLE_FACTOR, events=rsegments[0],  time_range=time_range);
+        Event.PlotSignalAndEvents(self.getFeature('impact_envelope'),
+                                  sampling_rate=self.sampling_rate * VB_UPSAMPLE_FACTOR, events=rsegments[0],
+                                  time_range=time_range);
         return rsegments;
 
-    def plotEvents(self, events, time_range = 'default', **kwargs):
+
+    def plotEvents(self, events, time_range='default', **kwargs):
         time_range_use = time_range;
-        if(time_range.lower() == 'default'):
-            time_range_use = [0,0];
-            time_range_use[0] = events[0].start-1;
-            time_range_use[1] = events[-1].start+1;
+        if (time_range.lower() == 'default'):
+            time_range_use = [0, 0];
+            time_range_use[0] = events[0].start - 1;
+            time_range_use[1] = events[-1].start + 1;
 
         signal = self.getFeature('local_rhythmic_saliency');
-        mplt = Event.PlotSignalAndEvents(signal, sampling_rate=self.sampling_rate * VB_UPSAMPLE_FACTOR, events=events, time_range=time_range_use, **kwargs);
+        mplt = Event.PlotSignalAndEvents(signal, sampling_rate=self.sampling_rate * VB_UPSAMPLE_FACTOR, events=events,
+                                         time_range=time_range_use, **kwargs);
         plt.xlabel('Time (s)')
         return mplt;
+
 
     def plotCutEvents(self, **kwargs):
         signal = self.getFeature('impact_envelope');
         events = self.getFeature('cut_events', **kwargs);
-        Event.PlotSignalAndEvents(signal, sampling_rate=self.sampling_rate*VB_UPSAMPLE_FACTOR, events=events, **kwargs);
+        Event.PlotSignalAndEvents(signal, sampling_rate=self.sampling_rate * VB_UPSAMPLE_FACTOR, events=events,
+                                  **kwargs);
+
 
     def plotVisibleImpacts(self, **kwargs):
         signal = self.getFeature('impact_envelope');
         events = self.getFeature('visible_impacts', **kwargs);
-        Event.PlotSignalAndEvents(signal, sampling_rate=self.sampling_rate*VB_UPSAMPLE_FACTOR, events=events, **kwargs);
+        Event.PlotSignalAndEvents(signal, sampling_rate=self.sampling_rate * VB_UPSAMPLE_FACTOR, events=events,
+                                  **kwargs);
         plt.title('Impact Envelope & Visual Beats')
         plt.xlabel('Time (s)')
         plt.ylabel('Impact Strength')
+
 
     def plotImpactEnvelope(self, **kwargs):
         signal = self.getFeature('local_rhythmic_saliency');
         # events = self.getFeature('visual_beats', **kwargs);
         events = None;
-        Event.PlotSignalAndEvents(signal, sampling_rate=self.sampling_rate*VB_UPSAMPLE_FACTOR, events=events, **kwargs);
+        Event.PlotSignalAndEvents(signal, sampling_rate=self.sampling_rate * VB_UPSAMPLE_FACTOR, events=events,
+                                  **kwargs);
         plt.title('Impact Envelope & Visual Beats')
         plt.xlabel('Time (s)')
         plt.ylabel('Impact Strength')
 
+
     def plotVisualBeats(self, **kwargs):
         signal = self.getFeature('local_rhythmic_saliency');
         events = self.getFeature('visual_beats', **kwargs);
-        Event.PlotSignalAndEvents(signal, sampling_rate=self.sampling_rate*VB_UPSAMPLE_FACTOR, events=events, **kwargs);
+        Event.PlotSignalAndEvents(signal, sampling_rate=self.sampling_rate * VB_UPSAMPLE_FACTOR, events=events,
+                                  **kwargs);
         plt.title('Impact Envelope & Visual Beats')
         plt.xlabel('Time (s)')
         plt.ylabel('Impact Strength')
@@ -903,6 +945,7 @@ if(USING_OPENCV):
 
     def loadFlowFeatures(self):
         self.load(features_to_load=['directogram_powers', 'directogram']);
+
 
     FEATURE_FUNCS['local_rhythmic_saliency'] = getLocalRhythmicSaliency;
     FEATURE_FUNCS['directogram_powers'] = getDirectogramPowers;
@@ -918,6 +961,4 @@ if(USING_OPENCV):
     FEATURE_FUNCS['forward_visual_impact_envelope'] = getForwardVisibleImpactEnvelope;
     FEATURE_FUNCS['directional_flux'] = getDirectionalFlux;
     FEATURE_FUNCS['visual_tempogram'] = getVisualTempogram;
-    FEATURE_FUNCS['cut_events']=getCutEvents;
-
-
+    FEATURE_FUNCS['cut_events'] = getCutEvents;

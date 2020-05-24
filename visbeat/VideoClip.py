@@ -1,6 +1,6 @@
 
-from Video import *
-from AudioClip import *
+from .Video import *
+from .AudioClip import *
 
 class VideoClip(Video):
     """VideoClip (class): A segment of a video, and a bunch of convenience functions to go with it.
@@ -34,7 +34,7 @@ class VideoClip(Video):
                 self.end=time_per_frame*math.floor(truediv(self.end,time_per_frame));
             if(video.name):
                 self.name = video.name+"_{}_{}".format(start,end);
-            self.audio = video.audio.AudioClip(start=start, end=end);
+            self.audio = video.audio.NewAudioClip(start=start, end=end);
         else:
             assert(False),"must provide video to VideoClip init"
 
